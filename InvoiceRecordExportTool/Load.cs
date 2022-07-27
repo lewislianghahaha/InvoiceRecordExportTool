@@ -2,9 +2,9 @@
 
 namespace InvoiceRecordExportTool
 {
-    public partial class Main : Form
+    public partial class Load : Form
     {
-        public Main()
+        public Load()
         {
             InitializeComponent();
         }
