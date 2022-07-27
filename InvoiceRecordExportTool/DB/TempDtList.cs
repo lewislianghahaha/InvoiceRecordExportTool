@@ -7,7 +7,7 @@ namespace InvoiceRecordExportTool.DB
     public class TempDtList
     {
         //导入-客户基础信息列表
-        public DataTable MakeCusteomerBasicTemp()
+        public DataTable MakeCustomerBasicTemp()
         {
             var dt = new DataTable();
             for (var i = 0; i < 4; i++)
@@ -45,7 +45,7 @@ namespace InvoiceRecordExportTool.DB
         /// 导入-物料对应分类编码列表
         /// </summary>
         /// <returns></returns>
-        public DataTable MakeMaterBasicTemp()
+        public DataTable MakeMaterialBasicTemp()
         {
             var dt = new DataTable();
             for (var i = 0; i < 3; i++)

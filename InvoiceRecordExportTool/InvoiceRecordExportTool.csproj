@@ -91,6 +91,7 @@
     <Compile Include="Task\ExportDt.cs" />
     <Compile Include="Task\Generate.cs" />
     <Compile Include="Task\Import.cs" />
+    <Compile Include="Task\SearchDt.cs" />
     <Compile Include="Task\TaskLogic.cs" />
     <EmbeddedResource Include="Load.resx">
       <DependentUpon>Load.cs</DependentUpon>

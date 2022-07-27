@@ -10,7 +10,7 @@ namespace InvoiceRecordExportTool.DB
     /// <summary>
     /// 获取连接字符串
     /// </summary>
-    /// 0:读取K3-Cloud正式库,当为1:读取FinancialRecords库
+    /// 0:读取K3-Cloud正式库,1:读取FinancialRecords库
     /// <returns></returns>
     /// 
     public class ConnString

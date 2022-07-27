@@ -73,8 +73,82 @@ namespace InvoiceRecordExportTool.DB
             return _result;
         }
 
+        /// <summary>
+        /// 获取FinancialRecords内的T_BD_CustomerList记录
+        /// </summary>
+        /// <returns></returns>
+        public string Get_SearchCustomerList()
+        {
+            _result = $@"
+                            SELECT * FROM dbo.T_BD_CustomerList A
+                        ";
 
+            return _result;
+        }
 
+        /// <summary>
+        /// 获取FinancialRecords内的T_BD_MaterialBarcode记录
+        /// </summary>
+        /// <returns></returns>
+        public string Get_SearchMaterialBarcode()
+        {
+            _result = $@"
+                            SELECT * FROM dbo.T_BD_MaterialBarcode A
+                        ";
+
+            return _result;
+        }
+
+        /// <summary>
+        /// 根据typeid获取对应的模板表记录 只显示TOP 1记录(批量更新使用)
+        /// </summary>
+        /// <param name="typeid">0:更新T_BD_CustomerList 1:更新T_BD_MaterialBarcode</param>
+        /// <returns></returns>
+        public string SearchUpdateTable(int typeid)
+        {
+            switch (typeid)
+            {
+                case 0:
+                    _result = $@"
+                          SELECT Top 1 a.CustomerCode,a.CustomerSuCode,a.CustomerAdd,a.CustomerBrank,a.Flastop_time
+                          FROM T_BD_CustomerList a
+                        ";
+                    break;
+                case 1:
+                    _result = $@"
+                          SELECT Top 1 a.Name,a.Code,a.CodeVersion,a.Flastop_time
+                          FROM T_BD_MaterialBarcode a
+                        ";
+                    break;
+            }
+            return _result;
+        }
+
+        /// <summary>
+        /// 批量更新使用
+        /// </summary>
+        /// <param name="typeid">0:更新T_BD_CustomerList 1:更新T_BD_MaterialBarcode</param>
+        /// <returns></returns>
+        public string UpdateEntry(int typeid)
+        {
+            switch (typeid)
+            {
+                case 0:
+                    _result = $@"
+                                    UPDATE dbo.T_BD_CustomerList SET CustomerSuCode=@CustomerSuCode,CustomerAdd=@CustomerAdd,CustomerBrank=@CustomerBrank,
+                                                                     Flastop_time=@Flastop_time
+                                    WHERE CustomerCode=@CustomerCode
+                               ";
+                    break;
+                case 1:
+                    _result = $@"
+                                    UPDATE dbo.T_BD_MaterialBarcode SET Code=@Code,CodeVersion=@CodeVersion,Flastop_time=@Flastop_time
+                                    WHERE Name=@Name
+                               ";
+                    break;
+            }
+            return _result;
+        }
 
     }
 }
