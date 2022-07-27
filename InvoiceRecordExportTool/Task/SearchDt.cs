@@ -40,7 +40,7 @@ namespace InvoiceRecordExportTool.Task
         /// 获取FinancialRecords内的T_BD_CustomerList记录
         /// </summary>
         /// <returns></returns>
-        private DataTable SearchCustomerBaseRecord()
+        public DataTable SearchCustomerBaseRecord()
         {
             var dt = UseSqlSearchIntoDt(1,sqlList.Get_SearchCustomerList()).Copy();
             return dt;
@@ -50,7 +50,7 @@ namespace InvoiceRecordExportTool.Task
         /// 获取FinancialRecords内的T_BD_MaterialBarcode记录
         /// </summary>
         /// <returns></returns>
-        private DataTable SearchMaterialBaseRecord()
+        public DataTable SearchMaterialBaseRecord()
         {
             var dt = UseSqlSearchIntoDt(1, sqlList.Get_SearchMaterialBarcode()).Copy();
             return dt;
@@ -62,7 +62,7 @@ namespace InvoiceRecordExportTool.Task
         /// <param name="sdt"></param>
         /// <param name="edt"></param>
         /// <returns></returns>
-        private DataTable SearchK3Record(string sdt,string edt)
+        public DataTable SearchK3Record(string sdt,string edt)
         {
             var dt = UseSqlSearchIntoDt(0, sqlList.GetSourceRecord(sdt,edt)).Copy();
             return dt;
