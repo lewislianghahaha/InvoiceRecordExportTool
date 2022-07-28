@@ -16,19 +16,336 @@ namespace InvoiceRecordExportTool.Task
 
         /// <summary>
         /// 运算
+        /// 核心:以相同的'客户';相同的‘产品名称’进行组合,将‘数量’(根据情况获取‘计价数量’ 或 ‘库存数量’) '金额' ‘折扣额’ 进行合拼SUM()
         /// </summary>
-        /// <param name="sdt"></param>
-        /// <param name="edt"></param>
+        /// <param name="sdt">开始日期</param>
+        /// <param name="edt">结束日期</param>
         /// <returns></returns>
         public DataTable GenerateDt(string sdt, string edt)
         {
+            #region 参数
+            //产品名称
+            var materialcode = string.Empty;
+            //规格型号
+            var kui = string.Empty;
+            //单位
+            var unit = string.Empty;
+            //数量
+            decimal qty = 0;
+            //金额
+            decimal amount = 0;
+            //折扣额
+            decimal distcount = 0;
+
+            #endregion
+
             //获取导出临时表
             var exportdt = tempDtList.ExportDt();
+            //保存从‘K3数据集’内得出的（唯一）客户名称记录
+            var customtemp = tempDtList.MakeCustomerTemp();
 
-            //todo:分别获取‘’
+            //用于保存-将各客户‘明细行’整合数据
+            var detailtemp = tempDtList.MakeDetailTemp();
+            //用于保存-根据‘产品名称’汇总的数据
+            var sumtemp = tempDtList.MakeDetailTemp();
 
+            //保存从‘detailtemp临时表’内得出的（唯一）产品名称记录
+            var materialtemp = tempDtList.MakeMaterialTemp();
+
+
+            //分别获取‘K3数据源’ ‘客户基础资料’及‘物料基础资料’
+            var k3Dt = searchDt.SearchK3Record(sdt, edt).Copy();
+            var customerBasicdt = searchDt.SearchCustomerBaseRecord().Copy();
+            var materialBasicdt = searchDt.SearchMaterialBaseRecord().Copy();
+
+            //从'K3DT'获取唯一的客户列表信息
+            var k3Custtempdt = InsertCustomerList(customtemp, k3Dt);
+
+            //循环‘k3Custtempdt',并以‘k3Dt’为条件,获取对应的明细记录
+            for (var rowid = 0; rowid < k3Custtempdt.Rows.Count; rowid++)
+            {
+                //根据‘客户’获取K3记录集明细记录
+                var custdtlrows = k3Dt.Select("客户名称='"+ Convert.ToString(k3Custtempdt.Rows[rowid][0]) +"'");
+                //将获取明细行中的各项进行数据转换,转换后插入至D内
+                for (var i = 0; i < custdtlrows.Length; i++)
+                {
+                    //获取‘客户开票特殊要求’记录
+                    var notice = Convert.ToString(custdtlrows[i][23]);
+
+                    //以下为根据‘客户开票特殊要求’记录，判断获取相关值
+                    //产品名称
+                    materialcode = Convert.ToString(notice.Contains("明细") ? custdtlrows[i][7] : custdtlrows[i][22]);
+                    //规格型号
+                    kui = notice.Contains("规格") ? Convert.ToString(custdtlrows[i][8]) : DBNull.Value.ToString();
+                    //单位
+                    unit = Convert.ToString(notice.Contains("库存") ? custdtlrows[i][18] : custdtlrows[i][9]);
+                    //数量
+                    qty = Convert.ToDecimal(notice.Contains("库存") ? custdtlrows[i][19] : custdtlrows[i][10]);
+                    //金额=价税合计+折扣额
+                    amount = Convert.ToDecimal(Convert.ToDecimal(custdtlrows[i][17])+Convert.ToDecimal(custdtlrows[i][15]));
+                    //折扣额
+                    distcount = Convert.ToDecimal(custdtlrows[i][15]);
+
+                    //将数据集插入至detailtemp内
+                    detailtemp.Merge(GetDetailDt(materialcode, kui, unit, qty, amount,Convert.ToDecimal(custdtlrows[i][13])
+                                                 ,distcount,Convert.ToString(custdtlrows[i][22]), Convert.ToString(k3Custtempdt.Rows[rowid][0])
+                                                 , detailtemp));
+                }
+
+                //将‘数量’ ‘金额’ ‘折扣额’变量初始化
+                qty = 0;
+                amount = 0;
+                distcount = 0;
+
+                var a1 = detailtemp.Copy();
+
+                //将插入的detailtemp作为条件,获取唯一的‘产品名称’信息,并插入至materialtemp内(重)
+                materialtemp.Merge(InsertMaterialList(materialtemp,detailtemp));
+
+                //循环materialtemp;并将‘数量’ ‘金额’ ‘折扣额’进行数据汇总
+                foreach (DataRow rows in materialtemp.Rows)
+                {
+                    var dtlrows = detailtemp.Select("产品名称='" + Convert.ToString(rows[0]) + "'");
+                    //根据‘产品名称’将以下三项进行累加
+                    for (var i = 0; i < dtlrows.Length; i++)
+                    {
+                        //数量
+                        qty += Convert.ToDecimal(dtlrows[i][3]);
+                        //金额
+                        amount += Convert.ToDecimal(dtlrows[i][4]);
+                        //折扣额
+                        distcount += Convert.ToDecimal(dtlrows[i][6]);
+                    }
+                    //将相关数据汇总处理后,将记录插入至sumtemp内
+                    sumtemp.Merge(GetSumDt(Convert.ToString(dtlrows[0][0]),Convert.ToString(dtlrows[0][1]),
+                                           Convert.ToString(dtlrows[0][2]),qty,
+                                           amount,Convert.ToDecimal(dtlrows[0][5]),distcount,
+                                           Convert.ToString(dtlrows[0][7]),Convert.ToString(dtlrows[0][8])
+                                           ,sumtemp));
+
+
+                    //每次循环后 将‘数量’ ‘金额’ ‘折扣额’变量初始化
+                    qty = 0;
+                    amount = 0;
+                    distcount = 0;
+                }
+
+                var a2 = sumtemp.Copy();
+
+                //最后通过循环将整合后的记录插入至exportdt内
+                for (var sumid = 0; sumid < sumtemp.Rows.Count; sumid++)
+                {   
+                    var id = rowid + 1;
+                    //根据‘客户名称’获取customerBasicdt内对应的记录
+                    var custdtl = customerBasicdt.Select("CustomerCode='"+ Convert.ToString(sumtemp.Rows[sumid][8]) +"'");
+
+                    //根据‘物料开票信息’获取materialBasicdt内对应的记录
+                    var materialdtl = materialBasicdt.Select("Name='"+ Convert.ToString(sumtemp.Rows[sumid][7]) + "'");
+
+                    exportdt.Merge(GetExrportDt(exportdt, sumtemp.Rows[sumid]
+                                               ,id,Convert.ToString(materialdtl[0][2]),Convert.ToString(materialdtl[0][3])
+                                               , Convert.ToString(custdtl[0][2])
+                                               , Convert.ToString(custdtl[0][3])
+                                               , Convert.ToString(custdtl[0][4])
+                                               ,sumid));
+                }
+
+                //循环完成一行‘客户’信息数据处理后，插入空行
+                exportdt.Merge(InsertNullRow(exportdt));
+                //循环完成后将detailtemp 及 materialtemp记录清空
+                sumtemp.Rows.Clear();
+                detailtemp.Rows.Clear();
+                materialtemp.Rows.Clear();
+            }
             return exportdt;
         }
+
+        /// <summary>
+        /// 导出临时表-数据整理
+        /// </summary>
+        /// <param name="dt"></param>
+        /// <param name="row"></param>
+        /// <param name="id"></param>
+        /// <param name="xu">税收分类编码</param>
+        /// <param name="version">分类编码版本号</param>
+        /// <param name="suCode">购方税号</param>
+        /// <param name="add">购方地址电话</param>
+        /// <param name="bank">购方银行账号</param>
+        /// <param name="sumid">循环行ID</param>
+        /// <returns></returns>
+        private DataTable GetExrportDt(DataTable dt,DataRow row,
+                                       int id,string xu,string version,string suCode,string add,string bank,int sumid)
+        {
+            var newrow = dt.NewRow();
+            newrow[0] = "aqsd" + id;                                 //编号
+            newrow[1] = Convert.ToString(row[0]);                    //产品名称
+            newrow[2] = Convert.ToString(row[1]);                    //规格型号
+            newrow[3] = Convert.ToString(row[2]);                    //单位
+            newrow[4] = Convert.ToDecimal(row[3]);                   //数量
+            newrow[5] = Math.Round(Convert.ToDecimal(Convert.ToDecimal(row[4])/ Convert.ToDecimal(row[3])),4);   //单价 公式:金额/数量
+            newrow[6] = Convert.ToDecimal(row[4]);                   //金额
+            newrow[7] = Convert.ToDecimal(row[5]);                   //税率
+            newrow[8] = Convert.ToDecimal(row[6]);                   //折扣额
+            newrow[9] = "";                                          //备注
+            newrow[10] = xu;                                         //税收分类编码
+            newrow[11] = version;                                    //分类编码版本号
+            //以下为只显示一行
+            newrow[12] = sumid == 0 ? Convert.ToString(row[8]) : ""; //购方名称
+            newrow[13] = sumid == 0 ? suCode: "";                    //购方税号
+            newrow[14] = sumid == 0 ? add: "";                       //购方地址电话
+            newrow[15] = sumid == 0 ? bank: "";                      //购方银行账号
+
+            dt.Rows.Add(newrow);
+
+            return dt;
+        }
+
+        /// <summary>
+        /// 将整理后的记录插入至汇总表内
+        /// </summary>
+        /// <param name="materialcode">产品名称</param>
+        /// <param name="kui">规格型号</param>
+        /// <param name="unit">单位</param>
+        /// <param name="qty">数量</param>
+        /// <param name="amount">金额</param>
+        /// <param name="rate">税率</param>
+        /// <param name="distcount">折扣额</param>
+        /// <param name="message">物料开票信息</param>
+        /// <param name="custname">客户名称</param>
+        /// <param name="dt"></param>
+        /// <returns></returns>
+        private DataTable GetSumDt(string materialcode, string kui, string unit,
+                                      decimal qty, decimal amount, decimal rate, decimal distcount, string message,
+                                      string custname, DataTable dt)
+        {
+            var newrow = dt.NewRow();
+            newrow[0] = materialcode; //产品名称
+            newrow[1] = kui;          //规格型号
+            newrow[2] = unit;         //单位
+            newrow[3] = qty;          //数量
+            newrow[4] = amount;       //金额
+            newrow[5] = rate;         //税率
+            newrow[6] = distcount;    //折扣额
+            newrow[7] = message;      //物料开票信息
+            newrow[8] = custname;     //客户名称
+            dt.Rows.Add(newrow);
+            return dt;
+        }
+
+        /// <summary>
+        /// 将整理后的记录插入至明细表内
+        /// </summary>
+        /// <param name="materialcode">产品名称</param>
+        /// <param name="kui">规格型号</param>
+        /// <param name="unit">单位</param>
+        /// <param name="qty">数量</param>
+        /// <param name="amount">金额</param>
+        /// <param name="rate">税率</param>
+        /// <param name="distcount">折扣额</param>
+        /// <param name="message">物料开票信息</param>
+        /// <param name="custname">客户名称</param>
+        /// <param name="dt">临时表</param>
+        /// <returns></returns>
+        private DataTable GetDetailDt(string materialcode,string kui,string unit,
+                                      decimal qty,decimal amount,decimal rate,decimal distcount,string message,
+                                      string custname,DataTable dt)
+        {
+            var newrow = dt.NewRow();
+            newrow[0] = materialcode; //产品名称
+            newrow[1] = kui;          //规格型号
+            newrow[2] = unit;         //单位
+            newrow[3] = qty;          //数量
+            newrow[4] = amount;       //金额
+            newrow[5] = rate;         //税率
+            newrow[6] = distcount;    //折扣额
+            newrow[7] = message;      //物料开票信息
+            newrow[8] = custname;     //客户名称
+            dt.Rows.Add(newrow);
+
+            return dt;
+        }
+
+        /// <summary>
+        /// 从'detaildt'获取唯一的产品名称列表信息
+        /// </summary>
+        /// <param name="temp"></param>
+        /// <param name="detaildt"></param>
+        /// <returns></returns>
+        private DataTable InsertMaterialList(DataTable temp, DataTable detaildt)
+        {
+            var materialcode = string.Empty;
+
+            //循环获取唯一的‘客户信息’并插入至temp内;
+            foreach (DataRow row in detaildt.Rows)
+            {
+                var newrow = temp.NewRow();
+                if (materialcode == "")
+                {
+                    materialcode = Convert.ToString(row[0]);
+                    newrow[0] = materialcode;
+                }
+                else
+                {
+                    var newmaterialcode = Convert.ToString(row[0]);
+                    if (materialcode == newmaterialcode) continue;
+                    newrow[0] = newmaterialcode;
+                    materialcode = newmaterialcode;
+                }
+                temp.Rows.Add(newrow);
+            }
+            return temp;
+        }
+
+        /// <summary>
+        /// 从'K3DT'获取唯一的客户列表信息
+        /// </summary>
+        /// <param name="temp"></param>
+        /// <param name="k3Dt"></param>
+        /// <returns></returns>
+        private DataTable InsertCustomerList(DataTable temp,DataTable k3Dt)
+        {
+            var cust = string.Empty;
+
+            //循环获取唯一的‘客户信息’并插入至temp内;
+            foreach (DataRow row in k3Dt.Rows)
+            {
+                var newrow = temp.NewRow();
+                if (cust == "")
+                {
+                    cust = Convert.ToString(row[2]);
+                    newrow[0] = cust;                 
+                }
+                else
+                {
+                    var newcust = Convert.ToString(row[2]);
+                    if(cust == newcust) continue;
+                    newrow[0] = newcust;
+                    cust = newcust;
+                }
+                temp.Rows.Add(newrow);
+            }
+             return temp;
+        }
+
+        /// <summary>
+        /// 插入空白行
+        /// </summary>
+        /// <returns></returns>
+        private DataTable InsertNullRow(DataTable sourcedt)
+        {
+            var newrow = sourcedt.NewRow();
+
+            for (var i = 0; i < sourcedt.Columns.Count; i++)
+            {
+                newrow[i] = DBNull.Value;
+            }
+
+            sourcedt.Rows.Add(newrow);
+            return sourcedt;
+        }
+
+
+
 
         /// <summary>
         /// 导入并运算基础信息

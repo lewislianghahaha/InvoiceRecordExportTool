@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using System.Threading;
 using System.Windows.Forms;
 using InvoiceRecordExportTool.Task;
@@ -104,13 +105,15 @@ namespace InvoiceRecordExportTool
         {
             try
             {
-                //todo:若结束日期小于开始日期,报异常提示
-                var sdt = Convert.ToString(dtstr.Value.Date);
-                var edt = Convert.ToString(dtend.Value.Date);
+                var sdt = dtstr.Value.Date;
+                var edt = dtend.Value.Date;
+
+                //若结束日期小于开始日期,报异常提示
+                if(sdt>edt) throw new Exception("异常:结束日期不能小于开始日期,请重新选择日期并进行运算");
 
                 taskLogic.TaskId = 2;
-                taskLogic.Sdt = sdt;
-                taskLogic.Edt = edt;
+                taskLogic.Sdt = sdt.ToShortDateString();
+                taskLogic.Edt = edt.ToShortDateString();
 
                 //使用子线程工作(作用:通过调用子线程进行控制Load窗体的关闭情况)
                 new Thread(Start).Start();
@@ -120,7 +123,14 @@ namespace InvoiceRecordExportTool
                 if (taskLogic.ResultTable.Rows.Count == 0) throw new Exception("运算出现异常,请联系管理员");
                 else
                 {
-                    
+                    if (MessageBox.Show($"运算成功,是否进行导出至Excel?", $"提示", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                    {
+                        if(!Export(taskLogic.ResultTable)) throw new Exception("导出异常,请联系管理员");
+                        else
+                        {
+                            MessageBox.Show($"导出成功", $"信息", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                    }
                 }
 
             }
@@ -134,18 +144,32 @@ namespace InvoiceRecordExportTool
         /// 导出
         /// </summary>
         /// <returns></returns>
-        private bool Export()
+        private bool Export(DataTable exportdt)
         {
             var result = true;
 
             try
             {
+                var saveFileDialog = new SaveFileDialog { Filter = $"Xlsx文件|*.xlsx" };
+                if (saveFileDialog.ShowDialog() != DialogResult.OK) return false;
+                var fileAdd = saveFileDialog.FileName;
 
+                taskLogic.TaskId = 3;
+                taskLogic.Exportdt = exportdt.Copy();
+                taskLogic.FileAddress = fileAdd;
+
+                //使用子线程工作(作用:通过调用子线程进行控制Load窗体的关闭情况)
+                new Thread(Start).Start();
+                load.StartPosition = FormStartPosition.CenterScreen;
+                load.ShowDialog();
+
+                result = taskLogic.ResultMark;
             }
             catch (Exception)
             {
                 result = false;
             }
+
             return result;
         }
 
@@ -181,7 +205,6 @@ namespace InvoiceRecordExportTool
                 load.Close();
             }));
         }
-
 
     }
 }

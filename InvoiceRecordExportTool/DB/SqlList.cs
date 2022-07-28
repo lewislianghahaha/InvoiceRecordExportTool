@@ -25,7 +25,7 @@ namespace InvoiceRecordExportTool.DB
 		                               ,B.FPRICE 单价
 		                               ,ISNULL(B.FENTRYTAXRATE,1)/100 税率  --*
 		                               ,B.FNOTAXAMOUNTFOR 不含税金额
-		                               ,B.FDISCOUNTAMOUNTFOR 折扣额   --*
+		                               ,ISNULL(B.FDISCOUNTAMOUNTFOR,0) 折扣额   --*
 		                               ,B.FTAXAMOUNTFOR 税额
 		                               ,B.FALLAMOUNTFOR 明细价税合计  --*
 
@@ -64,8 +64,8 @@ namespace InvoiceRecordExportTool.DB
                             AND A.FBILLTYPEID = '180ecd4afd5d44b5be78a6efe4a7e041'
                             AND A.FDOCUMENTSTATUS = 'C'--已审核
                             AND A.FSALEDEPTID <> '106048'--销售部门不包含‘国际事业部’
-                            AND CONVERT(VARCHAR(100), A.FDATE, 23)>= '{sdt}'
-                            AND CONVERT(VARCHAR(100), A.FDATE, 23)<= '{edt}'
+                            AND CONVERT(VARCHAR(100), A.FDATE, 23)>= CONVERT(VARCHAR(100),'{sdt}',23)
+                            AND CONVERT(VARCHAR(100), A.FDATE, 23)<= CONVERT(VARCHAR(100),'{edt}',23)
 
                             ORDER BY A.FDATE,A.FBILLNO
                         ";

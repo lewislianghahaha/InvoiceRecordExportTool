@@ -7,6 +7,106 @@ namespace InvoiceRecordExportTool.DB
     public class TempDtList
     {
         /// <summary>
+        /// ‘运算’时使用-1)获取K3数据源的整合结果 2)获取汇总后的记录
+        /// </summary>
+        /// <returns></returns>
+        public DataTable MakeDetailTemp()
+        {
+            var dt = new DataTable();
+            for (var i = 0; i < 9; i++)
+            {
+                var dc = new DataColumn();
+                switch (i)
+                {
+                    case 0:
+                        dc.ColumnName = "产品名称";
+                        dc.DataType = Type.GetType("System.String");
+                        break;
+                    case 1:
+                        dc.ColumnName = "规格型号";
+                        dc.DataType = Type.GetType("System.String");
+                        break;
+                    case 2:
+                        dc.ColumnName = "单位";
+                        dc.DataType = Type.GetType("System.String");
+                        break;
+                    case 3:
+                        dc.ColumnName = "数量";
+                        dc.DataType = Type.GetType("System.Decimal"); 
+                        break;
+                    case 4:
+                        dc.ColumnName = "金额";
+                        dc.DataType = Type.GetType("System.Decimal");
+                        break;
+                    case 5:
+                        dc.ColumnName = "税率";
+                        dc.DataType = Type.GetType("System.Decimal");
+                        break;
+                    case 6:
+                        dc.ColumnName = "折扣额";
+                        dc.DataType = Type.GetType("System.String");
+                        break;
+                    case 7:
+                        dc.ColumnName = "物料开票信息";
+                        dc.DataType = Type.GetType("System.String");
+                        break;
+                    case 8:
+                        dc.ColumnName = "客户名称";
+                        dc.DataType = Type.GetType("System.String");
+                        break;
+                }
+                dt.Columns.Add(dc);
+            }
+            return dt;
+        }
+
+        /// <summary>
+        /// 客户列表-‘运算’时获取数据集内的‘产品名称’记录(不唯一)
+        /// </summary>
+        /// <returns></returns>
+        public DataTable MakeMaterialTemp()
+        {
+            var dt = new DataTable();
+            for (var i = 0; i < 1; i++)
+            {
+                var dc = new DataColumn();
+                switch (i)
+                {
+                    //产品名称
+                    case 0:
+                        dc.ColumnName = "MaterialCode";
+                        dc.DataType = Type.GetType("System.String");
+                        break;
+                }
+                dt.Columns.Add(dc);
+            }
+            return dt;
+        }
+
+        /// <summary>
+        /// 客户列表-‘运算’时获取数据集内的‘客户’记录(不唯一)
+        /// </summary>
+        /// <returns></returns>
+        public DataTable MakeCustomerTemp()
+        {
+            var dt = new DataTable();
+            for (var i = 0; i < 1; i++)
+            {
+                var dc = new DataColumn();
+                switch (i)
+                {
+                    //购方名称
+                    case 0:
+                        dc.ColumnName = "CustomerCode";
+                        dc.DataType = Type.GetType("System.String");
+                        break;
+                }
+                dt.Columns.Add(dc);
+            }
+            return dt;
+        }
+
+        /// <summary>
         /// 客户基础信息列表-与数据库操作时使用
         /// </summary>
         /// <returns></returns>
