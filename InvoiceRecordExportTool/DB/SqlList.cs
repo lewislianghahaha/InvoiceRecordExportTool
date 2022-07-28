@@ -110,13 +110,13 @@ namespace InvoiceRecordExportTool.DB
             {
                 case 0:
                     _result = $@"
-                          SELECT Top 1 a.CustomerCode,a.CustomerSuCode,a.CustomerAdd,a.CustomerBrank,a.Flastop_time
+                          SELECT Top 1 a.ID,a.CustomerCode,a.CustomerSuCode,a.CustomerAdd,a.CustomerBrank,a.Flastop_time
                           FROM T_BD_CustomerList a
                         ";
                     break;
                 case 1:
                     _result = $@"
-                          SELECT Top 1 a.Name,a.Code,a.CodeVersion,a.Flastop_time
+                          SELECT Top 1 a.ID,a.Name,a.Code,a.CodeVersion,a.Flastop_time
                           FROM T_BD_MaterialBarcode a
                         ";
                     break;

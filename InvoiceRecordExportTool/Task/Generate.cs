@@ -15,6 +15,22 @@ namespace InvoiceRecordExportTool.Task
         TempDtList tempDtList=new TempDtList();
 
         /// <summary>
+        /// 运算
+        /// </summary>
+        /// <param name="sdt"></param>
+        /// <param name="edt"></param>
+        /// <returns></returns>
+        public DataTable GenerateDt(string sdt, string edt)
+        {
+            //获取导出临时表
+            var exportdt = tempDtList.ExportDt();
+
+            //todo:分别获取‘’
+
+            return exportdt;
+        }
+
+        /// <summary>
         /// 导入并运算基础信息
         /// 根据typeid,导入相关EXCEL至DT,并按情况执行‘更新’及‘插入’数据
         /// </summary>
@@ -24,41 +40,115 @@ namespace InvoiceRecordExportTool.Task
         public bool MakeBasicInfo(int typeid,string fileaddress)
         {
             var result = true;
-            var resourcedt=new DataTable();
-
-            var inserttemp=new DataTable();
-            var uptemp=new DataTable();
 
             try
             {
-                //通过fileaddress获取EXCEL数据;若返回DT为空,返回result为false
+                //通过fileaddress获取EXCEL数据;若返回DT为空,即返回result为false
                 var exceldt = import.ImportExcelToDt(fileaddress, typeid);
 
                 if (exceldt.Rows.Count > 0)
                 {
-                    //todo:从数据库内获取对应表格内的数据(用于数据源比较)
-                    resourcedt = typeid == 0 ? searchDt.SearchCustomerBaseRecord().Copy() : searchDt.SearchMaterialBaseRecord().Copy();
+                    //按照typeid获取不同的临时表数据结构
+                    var inserttemp = typeid == 0 ? tempDtList.InsertCustomerBasicTemp() : tempDtList.InsertMaterialBasicTemp();
 
-                    //todo:循环比较得出;若存在,就更新;反之,插入
+                    var uptemp = typeid == 0 ? tempDtList.InsertCustomerBasicTemp() : tempDtList.InsertMaterialBasicTemp();
 
+                    //从数据库内获取对应表格内的数据(用于数据源比较)
+                    var resourcedt = typeid == 0 ? searchDt.SearchCustomerBaseRecord().Copy() : searchDt.SearchMaterialBaseRecord().Copy();
 
-                    //todo:将得出的结果进行插入或更新
+                    //若resourcedt为0,即将exceldt记录全插入至inserttemp临时表内
+                    if (resourcedt.Rows.Count == 0)
+                    {
+                        #region mark
+                        //for (var i = 0; i < exceldt.Rows.Count; i++)
+                        //{
+                        //    inserttemp.ImportRow(exceldt.Rows[i]);
+                        //}
+                        #endregion
 
+                        foreach (DataRow row in exceldt.Rows)
+                        {
+                            inserttemp.Merge(MakeTempRecord(inserttemp, typeid, row));
+                        }
+                    }
+                    //循环比较得出;若存在,就插入至更新临时表;反之,插入至插入临时表(注:使用typeid区分)
+                    else
+                    {
+                        var colname = typeid == 0 ? "CustomerCode" : "Name";
+
+                        foreach (DataRow row in exceldt.Rows)
+                        {
+                            //判断EXCEL的值是否在数据表内存在
+                            var dtlrows = resourcedt.Select($"{colname}='" + Convert.ToString(row[0]) + "'");
+                            //若存在,将excel数据存放至uptemp;反之存放至inserttemp
+                            if (dtlrows.Length > 0)
+                            {
+                                uptemp.Merge(MakeTempRecord(uptemp, typeid, row));
+                            }
+                            else
+                            {
+                                inserttemp.Merge(MakeTempRecord(inserttemp, typeid, row));
+                            }
+                        }
+                    }
+
+                    //将得出的结果进行插入或更新
+                    if (inserttemp.Rows.Count>0 && typeid==0)
+                        ImportDtToDb("T_BD_CustomerList", inserttemp);
+                    if(inserttemp.Rows.Count>0 && typeid==1)
+                        ImportDtToDb("T_BD_MaterialBarcode", inserttemp);
+                    if(uptemp.Rows.Count>0 && typeid==0)
+                        UpdateDbFromDt(uptemp,0);
+                    if(uptemp.Rows.Count>0 && typeid==1)
+                        UpdateDbFromDt(uptemp,1);
                 }
                 else
                 {
                     result = false;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                var a = ex.Message;
                 result = false;
             }
 
             return result;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="temp"></param>
+        /// <param name="typeid">0:T_BD_CustomerList 1:T_BD_MaterialBarcode</param>
+        /// <param name="row"></param>
+        /// <returns></returns>
+        private DataTable MakeTempRecord(DataTable temp,int typeid, DataRow row)
+        {
+            //按照T_BD_CustomerList 字段进行插入
+            if (typeid == 0)
+            {
+                var newrow = temp.NewRow();
+                newrow[1] = Convert.ToString(row[0]);   //CustomerCode
+                newrow[2] = Convert.ToString(row[1]);   //CustomerSuCode
+                newrow[3] = Convert.ToString(row[2]);   //CustomerAdd
+                newrow[4] = Convert.ToString(row[3]);   //CustomerBrank
+                newrow[5] = DateTime.Now.ToLocalTime(); //Flastop_time
+                temp.Rows.Add(newrow);
+            }
+            //按照T_BD_MaterialBarcode字段进行插入
+            else
+            {
+                var newrow = temp.NewRow();
+                newrow[1] = Convert.ToString(row[0]);   //Name
+                newrow[2] = Convert.ToString(row[1]);   //Code
+                newrow[3] = Convert.ToString(row[2]);   //CodeVersion
+                newrow[4] = DateTime.Now.ToLocalTime(); //Flastop_time
+                temp.Rows.Add(newrow);
+            }
 
+            return temp;
+        }
 
         /// <summary>
         /// 针对指定表进行数据插入至条码表内
@@ -84,10 +174,9 @@ namespace InvoiceRecordExportTool.Task
         /// <summary>
         /// 根据指定条件对数据表进行批量更新
         /// </summary>
-        /// <param name="tablename"></param>
         /// <param name="dt"></param>
-        /// <param name="typeid">0:更新记录 1:更新FRemarkid=1</param>
-        public void UpdateDbFromDt(string tablename, DataTable dt, int typeid)
+        /// <param name="typeid">0:更新T_BD_CustomerList 1:更新T_BD_MaterialBarcode</param>
+        public void UpdateDbFromDt(DataTable dt, int typeid)
         {
             var sqladpter = new SqlDataAdapter();
             var ds = new DataSet();

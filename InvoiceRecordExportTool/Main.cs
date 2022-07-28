@@ -46,11 +46,11 @@ namespace InvoiceRecordExportTool
                 load.StartPosition = FormStartPosition.CenterScreen;
                 load.ShowDialog();
 
-                //todo:返回是否成功标记
+                //返回是否成功标记
                 if(!taskLogic.ResultMark)throw new Exception("更新导入异常,请联系管理员");
                 else
                 {
-                    MessageBox.Show($"已完成", $"信息", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show($"已完成,请执行运算操作", $"信息", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
 
             }
@@ -82,9 +82,12 @@ namespace InvoiceRecordExportTool
                 load.StartPosition = FormStartPosition.CenterScreen;
                 load.ShowDialog();
 
-                //todo:返回是否成功标记
-
-
+                //返回是否成功标记
+                if (!taskLogic.ResultMark) throw new Exception("更新导入异常,请联系管理员");
+                else
+                {
+                    MessageBox.Show($"已完成,请执行运算操作", $"信息", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
             }
             catch (Exception ex)
             {
@@ -101,15 +104,49 @@ namespace InvoiceRecordExportTool
         {
             try
             {
+                //todo:若结束日期小于开始日期,报异常提示
                 var sdt = Convert.ToString(dtstr.Value.Date);
                 var edt = Convert.ToString(dtend.Value.Date);
 
+                taskLogic.TaskId = 2;
+                taskLogic.Sdt = sdt;
+                taskLogic.Edt = edt;
+
+                //使用子线程工作(作用:通过调用子线程进行控制Load窗体的关闭情况)
+                new Thread(Start).Start();
+                load.StartPosition = FormStartPosition.CenterScreen;
+                load.ShowDialog();
+
+                if (taskLogic.ResultTable.Rows.Count == 0) throw new Exception("运算出现异常,请联系管理员");
+                else
+                {
+                    
+                }
 
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, $"错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        /// <summary>
+        /// 导出
+        /// </summary>
+        /// <returns></returns>
+        private bool Export()
+        {
+            var result = true;
+
+            try
+            {
+
+            }
+            catch (Exception)
+            {
+                result = false;
+            }
+            return result;
         }
 
         /// <summary>

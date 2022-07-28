@@ -6,11 +6,104 @@ namespace InvoiceRecordExportTool.DB
 {
     public class TempDtList
     {
-        //导入-客户基础信息列表
+        /// <summary>
+        /// 客户基础信息列表-与数据库操作时使用
+        /// </summary>
+        /// <returns></returns>
+        public DataTable InsertCustomerBasicTemp()
+        {
+            var dt = new DataTable();
+            for (var i = 0; i < 6; i++)
+            {
+                var dc = new DataColumn();
+                switch (i)
+                {
+                    //ID
+                    case 0:
+                        dc.ColumnName = "ID";
+                        dc.DataType = Type.GetType("System.Int32"); 
+                        break;
+                    //购方名称
+                    case 1:
+                        dc.ColumnName = "CustomerCode";
+                        dc.DataType = Type.GetType("System.String");
+                        break;
+                    //购方税号
+                    case 2:
+                        dc.ColumnName = "CustomerSuCode";
+                        dc.DataType = Type.GetType("System.String");
+                        break;
+                    //购方地址电话
+                    case 3:
+                        dc.ColumnName = "CustomerAdd";
+                        dc.DataType = Type.GetType("System.String");
+                        break;
+                    //购方银行账号
+                    case 4:
+                        dc.ColumnName = "CustomerBrank";
+                        dc.DataType = Type.GetType("System.String");
+                        break;
+                    case 5:
+                        dc.ColumnName = "Flastop_time";
+                        dc.DataType = Type.GetType("System.DateTime");
+                        break;
+                }
+                dt.Columns.Add(dc);
+            }
+            return dt;
+        }
+
+        /// <summary>
+        /// 物料对应分类编码列表-与数据库操作时使用
+        /// </summary>
+        /// <returns></returns>
+        public DataTable InsertMaterialBasicTemp()
+        {
+            var dt = new DataTable();
+            for (var i = 0; i < 5; i++)
+            {
+                var dc = new DataColumn();
+                switch (i)
+                {
+                    //ID
+                    case 0:
+                        dc.ColumnName = "ID";
+                        dc.DataType = Type.GetType("System.Int32");
+                        break;
+                    //开票信息名称
+                    case 1:
+                        dc.ColumnName = "Name";
+                        dc.DataType = Type.GetType("System.String");
+                        break;
+                    //税收分类编码
+                    case 2:
+                        dc.ColumnName = "Code";
+                        dc.DataType = Type.GetType("System.String");
+                        break;
+                    //编码版本号
+                    case 3:
+                        dc.ColumnName = "CodeVersion";
+                        dc.DataType = Type.GetType("System.String");
+                        break;
+                    case 4:
+                        dc.ColumnName = "Flastop_time";
+                        dc.DataType = Type.GetType("System.DateTime");
+                        break;
+                }
+                dt.Columns.Add(dc);
+            }
+            return dt;
+        }
+
+
+        /// <summary>
+        /// 导入-客户基础信息列表（导入EXCEL使用）
+        /// </summary>
+        /// <returns></returns>
         public DataTable MakeCustomerBasicTemp()
         {
             var dt = new DataTable();
-            for (var i = 0; i < 4; i++)
+            for (var i = 0; i < 5; i++)
             {
                 var dc = new DataColumn();
                 switch (i)
@@ -35,6 +128,10 @@ namespace InvoiceRecordExportTool.DB
                         dc.ColumnName = "CustomerBrank";
                         dc.DataType = Type.GetType("System.String");
                         break;
+                    case 4:
+                        dc.ColumnName = "Flastop_time";
+                        dc.DataType = Type.GetType("System.DateTime"); 
+                        break;
                 }
                 dt.Columns.Add(dc);
             }
@@ -42,13 +139,13 @@ namespace InvoiceRecordExportTool.DB
         }
 
         /// <summary>
-        /// 导入-物料对应分类编码列表
+        /// 导入-物料对应分类编码列表（导入EXCEL使用）
         /// </summary>
         /// <returns></returns>
         public DataTable MakeMaterialBasicTemp()
         {
             var dt = new DataTable();
-            for (var i = 0; i < 3; i++)
+            for (var i = 0; i < 4; i++)
             {
                 var dc = new DataColumn();
                 switch (i)
@@ -67,6 +164,10 @@ namespace InvoiceRecordExportTool.DB
                     case 2:
                         dc.ColumnName = "CodeVersion";
                         dc.DataType = Type.GetType("System.String");
+                        break;
+                    case 3:
+                        dc.ColumnName = "Flastop_time";
+                        dc.DataType = Type.GetType("System.DateTime");
                         break;
                 }
                 dt.Columns.Add(dc);

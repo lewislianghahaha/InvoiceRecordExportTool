@@ -121,7 +121,7 @@ namespace InvoiceRecordExportTool.Task
         /// <param name="edt">结束日期</param>
         private void Generate(string sdt,string edt)
         {
-            
+            _resultTable = generate.GenerateDt(sdt, edt);
         }
 
         /// <summary>
