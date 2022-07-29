@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data;
 using System.Data.SqlClient;
+using System.Xml;
 using InvoiceRecordExportTool.DB;
 
 namespace InvoiceRecordExportTool.Task
@@ -52,7 +53,6 @@ namespace InvoiceRecordExportTool.Task
             //保存从‘detailtemp临时表’内得出的（唯一）产品名称记录
             var materialtemp = tempDtList.MakeMaterialTemp();
 
-
             //分别获取‘K3数据源’ ‘客户基础资料’及‘物料基础资料’
             var k3Dt = searchDt.SearchK3Record(sdt, edt).Copy();
             var customerBasicdt = searchDt.SearchCustomerBaseRecord().Copy();
@@ -102,6 +102,8 @@ namespace InvoiceRecordExportTool.Task
                 //将插入的detailtemp作为条件,获取唯一的‘产品名称’信息,并插入至materialtemp内(重)
                 materialtemp.Merge(InsertMaterialList(materialtemp,detailtemp));
 
+                var a3 = materialtemp.Copy();
+
                 //循环materialtemp;并将‘数量’ ‘金额’ ‘折扣额’进行数据汇总
                 foreach (DataRow rows in materialtemp.Rows)
                 {
@@ -134,24 +136,28 @@ namespace InvoiceRecordExportTool.Task
 
                 //最后通过循环将整合后的记录插入至exportdt内
                 for (var sumid = 0; sumid < sumtemp.Rows.Count; sumid++)
-                {   
+                {
                     var id = rowid + 1;
+
                     //根据‘客户名称’获取customerBasicdt内对应的记录
                     var custdtl = customerBasicdt.Select("CustomerCode='"+ Convert.ToString(sumtemp.Rows[sumid][8]) +"'");
 
                     //根据‘物料开票信息’获取materialBasicdt内对应的记录
                     var materialdtl = materialBasicdt.Select("Name='"+ Convert.ToString(sumtemp.Rows[sumid][7]) + "'");
 
-                    exportdt.Merge(GetExrportDt(exportdt, sumtemp.Rows[sumid]
-                                               ,id,Convert.ToString(materialdtl[0][2]),Convert.ToString(materialdtl[0][3])
-                                               , Convert.ToString(custdtl[0][2])
-                                               , Convert.ToString(custdtl[0][3])
-                                               , Convert.ToString(custdtl[0][4])
-                                               ,sumid));
+                    var xu = materialdtl.Length == 0 ? "" : Convert.ToString(materialdtl[0][2]);  //税收分类编码
+                    var version = materialdtl.Length==0? "": Convert.ToString(materialdtl[0][3]); //分类编码版本号
+
+                    var suCode = custdtl.Length == 0 ? "" : Convert.ToString(custdtl[0][2]);      //购方税号
+                    var add = custdtl.Length == 0 ? "" : Convert.ToString(custdtl[0][3]);         //购方地址电话
+                    var bank = custdtl.Length == 0 ? "": Convert.ToString(custdtl[0][4]);         //购方银行账号
+
+                    exportdt.Merge(GetExrportDt(exportdt, sumtemp.Rows[sumid],id,xu, version, suCode, add, bank, sumid));
                 }
 
                 //循环完成一行‘客户’信息数据处理后，插入空行
                 exportdt.Merge(InsertNullRow(exportdt));
+
                 //循环完成后将detailtemp 及 materialtemp记录清空
                 sumtemp.Rows.Clear();
                 detailtemp.Rows.Clear();
@@ -163,8 +169,8 @@ namespace InvoiceRecordExportTool.Task
         /// <summary>
         /// 导出临时表-数据整理
         /// </summary>
-        /// <param name="dt"></param>
-        /// <param name="row"></param>
+        /// <param name="dt">导出临时表</param>
+        /// <param name="row">detailtemp行记录</param>
         /// <param name="id"></param>
         /// <param name="xu">税收分类编码</param>
         /// <param name="version">分类编码版本号</param>
@@ -189,7 +195,7 @@ namespace InvoiceRecordExportTool.Task
             newrow[9] = "";                                          //备注
             newrow[10] = xu;                                         //税收分类编码
             newrow[11] = version;                                    //分类编码版本号
-            //以下为只显示一行
+            //以下为在'同一个客户内'只显示一行
             newrow[12] = sumid == 0 ? Convert.ToString(row[8]) : ""; //购方名称
             newrow[13] = sumid == 0 ? suCode: "";                    //购方税号
             newrow[14] = sumid == 0 ? add: "";                       //购方地址电话
@@ -273,23 +279,19 @@ namespace InvoiceRecordExportTool.Task
         /// <returns></returns>
         private DataTable InsertMaterialList(DataTable temp, DataTable detaildt)
         {
-            var materialcode = string.Empty;
-
-            //循环获取唯一的‘客户信息’并插入至temp内;
             foreach (DataRow row in detaildt.Rows)
             {
                 var newrow = temp.NewRow();
-                if (materialcode == "")
+                if (temp.Rows.Count == 0)
                 {
-                    materialcode = Convert.ToString(row[0]);
-                    newrow[0] = materialcode;
+                    newrow[0] = Convert.ToString(row[0]);
                 }
+                //将循环的行放到temp内进行查找,若不存在,才将ROW记录插入至temp内
                 else
                 {
-                    var newmaterialcode = Convert.ToString(row[0]);
-                    if (materialcode == newmaterialcode) continue;
-                    newrow[0] = newmaterialcode;
-                    materialcode = newmaterialcode;
+                    var dtlrow = temp.Select("MaterialCode='"+Convert.ToString(row[0])+"'");
+                    if (dtlrow.Length > 0) continue;
+                    newrow[0] = Convert.ToString(row[0]);
                 }
                 temp.Rows.Add(newrow);
             }
@@ -304,23 +306,20 @@ namespace InvoiceRecordExportTool.Task
         /// <returns></returns>
         private DataTable InsertCustomerList(DataTable temp,DataTable k3Dt)
         {
-            var cust = string.Empty;
-
             //循环获取唯一的‘客户信息’并插入至temp内;
             foreach (DataRow row in k3Dt.Rows)
             {
                 var newrow = temp.NewRow();
-                if (cust == "")
+                if (temp.Rows.Count == 0)
                 {
-                    cust = Convert.ToString(row[2]);
-                    newrow[0] = cust;                 
+                    newrow[0] = Convert.ToString(row[2]);
                 }
+                //将循环的行放到temp内进行查找,若不存在,才将ROW记录插入至temp内
                 else
                 {
-                    var newcust = Convert.ToString(row[2]);
-                    if(cust == newcust) continue;
-                    newrow[0] = newcust;
-                    cust = newcust;
+                    var dtlrow = temp.Select("CustomerCode='" + Convert.ToString(row[2]) + "'");
+                    if (dtlrow.Length > 0) continue;
+                    newrow[0] = Convert.ToString(row[2]);
                 }
                 temp.Rows.Add(newrow);
             }
