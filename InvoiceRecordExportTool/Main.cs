@@ -105,15 +105,15 @@ namespace InvoiceRecordExportTool
         {
             try
             {
-                var sdt = dtstr.Value.Date;
-                var edt = dtend.Value.Date;
+                var sdt = dtstr.Value.ToString("yyyy-MM-dd");//Convert.ToDateTime(dtstr.Value);
+                var edt = dtend.Value.ToString("yyyy-MM-dd");//Convert.ToDateTime(dtend.Value);
 
                 //若结束日期小于开始日期,报异常提示
-                if(sdt>edt) throw new Exception("异常:结束日期不能小于开始日期,请重新选择日期并进行运算");
+                if (DateTime.Compare(Convert.ToDateTime(sdt),Convert.ToDateTime(edt))>0) throw new Exception("异常:结束日期不能小于开始日期,请重新选择日期并进行运算");
 
                 taskLogic.TaskId = 2;
-                taskLogic.Sdt = sdt.ToShortDateString();
-                taskLogic.Edt = edt.ToShortDateString();
+                taskLogic.Sdt = sdt;
+                taskLogic.Edt = edt;
 
                 //使用子线程工作(作用:通过调用子线程进行控制Load窗体的关闭情况)
                 new Thread(Start).Start();

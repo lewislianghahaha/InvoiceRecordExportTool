@@ -189,9 +189,9 @@ namespace InvoiceRecordExportTool.Task
             newrow[3] = Convert.ToString(row[2]);                    //单位
             newrow[4] = Convert.ToDecimal(row[3]);                   //数量
             newrow[5] = Math.Round(Convert.ToDecimal(Convert.ToDecimal(row[4])/ Convert.ToDecimal(row[3])),4);   //单价 公式:金额/数量
-            newrow[6] = Convert.ToDecimal(row[4]);                   //金额
+            newrow[6] = Math.Round(Convert.ToDecimal(row[4]),2);     //金额
             newrow[7] = Convert.ToDecimal(row[5]);                   //税率
-            newrow[8] = Convert.ToDecimal(row[6]);                   //折扣额
+            newrow[8] = Math.Round(Convert.ToDecimal(row[6]),2);     //折扣额
             newrow[9] = "";                                          //备注
             newrow[10] = xu;                                         //税收分类编码
             newrow[11] = version;                                    //分类编码版本号

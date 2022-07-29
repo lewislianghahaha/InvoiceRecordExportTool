@@ -142,6 +142,7 @@
             // 
             // dtend
             // 
+            this.dtend.CustomFormat = "yyyy-MM-dd";
             this.dtend.Location = new System.Drawing.Point(70, 100);
             this.dtend.Name = "dtend";
             this.dtend.Size = new System.Drawing.Size(170, 21);
@@ -149,6 +150,7 @@
             // 
             // dtstr
             // 
+            this.dtstr.CustomFormat = "yyyy-MM-dd";
             this.dtstr.Location = new System.Drawing.Point(71, 68);
             this.dtstr.Name = "dtstr";
             this.dtstr.Size = new System.Drawing.Size(170, 21);
